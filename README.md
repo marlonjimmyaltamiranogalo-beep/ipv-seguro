@@ -1,24 +1,40 @@
-# IPV seguro
+# IPV Seguro para Vercel
 
-## Instalación
-
-```bash
-npm install
-cp .env.example .env
-```
-
-Edite `.env` y coloque una clave nueva de Gemini. La clave anterior debe revocarse porque estuvo expuesta en el navegador.
-
-```bash
-npm start
-```
-
-Abra `http://localhost:3000`.
+Proyecto adaptado a Vercel Functions. No utiliza Express ni `server.js`.
 
 ## Estructura
 
-- `public/index.html`: formulario y las 87 preguntas.
-- `server.js`: endpoint protegido que llama a Gemini.
-- `.env`: secretos locales; no se sube al repositorio.
+```text
+api/analyze.js
+public/index.html
+package.json
+vercel.json
+.env.example
+.gitignore
+```
 
-La puntuación incluida es una clasificación interna y no debe presentarse como baremo oficial del IPV sin validación profesional y documental.
+## Variables de entorno en Vercel
+
+Configure exactamente:
+
+```text
+GEMINI_API_KEY=su_clave_nueva
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Seleccione **Production and Preview** y vuelva a desplegar el proyecto.
+
+## Subida desde GitHub en el navegador
+
+1. Elimine del repositorio antiguo `server.js`.
+2. Suba las carpetas `api` y `public`.
+3. Suba `package.json`, `vercel.json`, `.env.example`, `.gitignore` y `README.md`.
+4. Espere el despliegue automático de Vercel.
+5. Abra el dominio del proyecto.
+
+## Seguridad
+
+- No suba un archivo `.env`.
+- Revoque cualquier clave que haya aparecido en capturas o código compartido.
+- La puntuación es una clasificación interna orientativa y no un baremo oficial.
+- El resumen de IA no debe utilizarse como decisión automática de contratación.

@@ -1,20 +1,13 @@
 {
-  "name": "ipv-seguro",
+  "name": "ipv-seguro-vercel",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "dotenv": "^16.5.0",
-    "express": "^5.1.0",
-    "express-rate-limit": "^7.5.0",
-    "helmet": "^8.1.0"
-  },
+  "description": "Evaluación IPV con función serverless de Gemini para Vercel",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "vercel dev",
+    "check": "node --check api/analyze.js"
   }
 }
