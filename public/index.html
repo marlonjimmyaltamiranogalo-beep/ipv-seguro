@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluación Competencias Comerciales - IPV Controlado con IA</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --accent: #0ea5e9;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-page); color: var(--text-main); line-height: 1.6; padding: 20px; }
+        .container { max-width: 850px; margin: 0 auto; background: var(--bg-card); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid var(--border); }
+        .header { background: linear-gradient(135deg, var(--primary), #0f172a); color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+        .header p { color: #93c5fd; font-size: 14px; }
+        
+        .progress-bar-container { background-color: #e2e8f0; height: 6px; width: 100%; }
+        .progress-bar { background-color: var(--accent); height: 100%; width: 25%; transition: width 0.3s ease; }
+
+        .form-section { padding: 30px; border-bottom: 1px solid var(--border); }
+        .section-title { font-size: 16px; font-weight: 600; color: var(--primary); margin-bottom: 10px; text-transform: uppercase; border-left: 4px solid var(--accent); padding-left: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .block-info { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; font-weight: normal; text-transform: none; }
+
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 600px) { .grid-inputs { grid-template-columns: 1fr; } }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .input-group input, .input-group select { padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background-color: #f8fafc; }
+        .input-group input:focus, .input-group select:focus { outline: none; border-color: var(--primary-light); background-color: #fff; }
+        
+        .question-block { display: none; }
+        .question-block.active { display: block; }
+
+        .question-card { padding: 25px 30px; border-bottom: 1px solid var(--border); }
+        .question-card:hover { background-color: #f8fafc; }
+        .question-text { font-size: 15px; font-weight: 600; margin-bottom: 15px; color: #1e293b; }
+        .options-container { display: flex; flex-direction: column; gap: 12px; }
+        .option-label { display: flex; align-items: flex-start; padding: 12px 15px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background-color: #fff; transition: all 0.2s; font-size: 14px; }
+        .option-label:hover { border-color: var(--primary-light); background-color: #f0fdf4; }
+        .option-label input[type="radio"] { margin-top: 4px; margin-right: 12px; accent-color: var(--primary); flex-shrink: 0; }
+        .option-label.selected { border-color: var(--primary); background-color: #eff6ff; font-weight: 500; }
+        
+        .footer-actions { padding: 30px; display: flex; justify-content: space-between; background-color: #f8fafc; }
+        .btn-nav { background-color: var(--primary); color: white; border: none; padding: 12px 30px; font-size: 15px; font-weight: 600; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(59,130,246,0.2); transition: background-color 0.2s; }
+        .btn-nav:hover { background-color: #1d4ed8; }
+        .btn-nav.btn-secondary { background-color: #64748b; }
+        .btn-nav.btn-secondary:hover { background-color: #475569; }
+        .btn-nav:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .privacy-notice { margin-top: 20px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; font-size: 13px; color: var(--text-muted); }
+        .privacy-notice label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+        .privacy-notice input { margin-top: 4px; }
+        .status-message { display: none; margin: 20px 30px 0; padding: 12px 14px; border-radius: 8px; font-size: 14px; }
+        .status-message.visible { display: block; }
+        .status-message.error { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; }
+        .status-message.success { color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Inventario de Personalidad para Vendedores (IPV)</h1>
+        <p>Responda de forma espontánea y sincera a las situaciones planteadas.</p>
+    </div>
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div id="statusMessage" class="status-message" role="status" aria-live="polite"></div>
+
+    <form id="ipvForm" action="https://formspree.io/f/mjgnkagw" method="POST">
+        
+        <!-- BLOQUE 0: DATOS GENERALES -->
+        <div id="bloqueDatos" class="question-block active">
+            <div class="form-section">
+                <div class="section-title">Datos Generales</div>
+                <div class="grid-inputs">
+                    <div class="input-group"><label>Nombre Completo *</label><input type="text" name="Nombre" required></div>
+                    <div class="input-group"><label>Correo Electrónico *</label><input type="email" name="Email" required></div>
+                    <div class="input-group">
+                        <label>Puesto al que aplica *</label>
+                        <select name="Puesto_Aplicado" required>
+                            <option value="" selected disabled>Seleccione un puesto</option>
+                            <option value="Supervisor de Ventas">Supervisor de Ventas</option>
+                            <option value="Coordinador de Canales">Coordinador de Canales Comercial</option>
+                            <option value="Televentas">Ejecutivo de Televentas</option>
+                            <option value="Asesor Comercial">Asesor Comercial</option>
+                        </select>
+                    </div>
+                    <div class="input-group"><label>Edad *</label><input type="number" name="Edad" required min="18"></div>
+                </div>
+                <div class="privacy-notice">
+                    <label>
+                        <input type="checkbox" name="Consentimiento_Datos" value="Aceptado" required>
+                        <span>Confirmo que he leído el aviso de privacidad de la organización y autorizo el tratamiento de mis datos para esta evaluación, incluida la generación de un resumen orientativo sujeto a revisión humana.</span>
+                    </label>
+                </div>
+            </div>
+            <div class="footer-actions" style="justify-content: flex-end;">
+                <button type="button" class="btn-nav" onclick="iniciarTest()">Comenzar Evaluación</button>
+            </div>
+        </div>
+
+        <!-- BLOQUE 1 -->
+        <div id="bloque1" class="question-block">
+            <div class="form-section">
+                <div class="section-title">Bloque 1 de 4 <span class="block-info">Preguntas 1 a 22</span></div>
+            </div>
+            <div id="containerB1"></div>
+            <div class="footer-actions">
+                <span></span>
+                <button type="button" class="btn-nav" onclick="cambiarBloque(1, 2)">Siguiente Bloque</button>
+            </div>
+        </div>
+
+        <!-- BLOQUE 2 -->
+        <div id="bloque2" class="question-block">
+            <div class="form-section">
+                <div class="section-title">Bloque 2 de 4 <span class="block-info">Preguntas 23 a 44</span></div>
+            </div>
+            <div id="containerB2"></div>
+            <div class="footer-actions">
+                <button type="button" class="btn-nav btn-secondary" onclick="cambiarBloque(2, 1)">Anterior</button>
+                <button type="button" class="btn-nav" onclick="cambiarBloque(2, 3)">Siguiente Bloque</button>
+            </div>
+        </div>
+
+        <!-- BLOQUE 3 -->
+        <div id="bloque3" class="question-block">
+            <div class="form-section">
+                <div class="section-title">Bloque 3 de 4 <span class="block-info">Preguntas 45 a 66</span></div>
+            </div>
+            <div id="containerB3"></div>
+            <div class="footer-actions">
+                <button type="button" class="btn-nav btn-secondary" onclick="cambiarBloque(3, 2)">Anterior</button>
+                <button type="button" class="btn-nav" onclick="cambiarBloque(3, 4)">Siguiente Bloque</button>
+            </div>
+        </div>
+
+        <!-- BLOQUE 4 -->
+        <div id="bloque4" class="question-block">
+            <div class="form-section">
+                <div class="section-title">Bloque 4 de 4 <span class="block-info">Preguntas 67 a 87</span></div>
+            </div>
+            <div id="containerB4"></div>
+            <div class="footer-actions">
+                <button type="button" class="btn-nav btn-secondary" onclick="cambiarBloque(4, 3)">Anterior</button>
+                <button type="submit" class="btn-nav">Finalizar y Enviar</button>
+            </div>
+        </div>
+
+        <!-- Métricas Psicométricas Ocultas -->
+        <input type="hidden" id="hidden_receptividad" name="Puntaje_Receptividad">
+        <input type="hidden" id="hidden_agresividad" name="Puntaje_Agresividad">
+        <input type="hidden" id="hidden_dgv" name="Puntaje_DGV_Global">
+        <input type="hidden" id="hidden_perfil" name="Analisis_IA_Candidato">
+        
+        <!-- Métricas de Tiempos Ocultas -->
+        <input type="hidden" id="t_bloque1" name="Tiempo_Bloque_1">
+        <input type="hidden" id="t_bloque2" name="Tiempo_Bloque_2">
+        <input type="hidden" id="t_bloque3" name="Tiempo_Bloque_3">
+        <input type="hidden" id="t_bloque4" name="Tiempo_Bloque_4">
+
+    </form>
+</div>
+
+<script>
+    // Variables para control de tiempos y navegación
+    let tiempos = { b1: 0, b2: 0, b3: 0, b4: 0 };
+    let tiempoInicioBloque = 0;
+    let bloqueActual = 0;
+
+    const bancoPreguntas = [
+        { id: 1, texto: "T... Debe salir de viaje con una persona de la que no conoce nada. ¿Sobre cuál de los siguientes aspectos de esa persona es preferible informar a T. para que el viaje resulte mejor?", opciones: [{ txt: "A. Su estilo de vida", val: "R" }, { txt: "B. Los puntos que tengan en común", val: "R" }, { txt: "C. Su actividad y responsabilidades profesionales", val: "N" }] },
+        { id: 2, texto: "Entre los siguientes tipos de vendedores de prendas confeccionadas, ¿cuál es el que tiene más probabilidades de éxito?", opciones: [{ txt: "A. El que presente las últimas novedades.", val: "N" }, { txt: "B. El que, tratando de conocer el estilo de su cliente, se interese por su modo de vida.", val: "R" }, { txt: "C. El que posea una buena capacidad de convencer.", val: "A" }] },
+        { id: 3, texto: "B... Tiene un proyecto importante para la promoción de un nuevo producto y va a exponer su idea ante el Comité de Dirección. ¿Cuál de las siguientes cualidades le será más útil para persuadir a su auditorio?", opciones: [{ txt: "A. Competencia técnica y un conocimiento perfecto del tema.", val: "N" }, { txt: "B. Capacidad para modificar sus razonamientos según la actitud del auditorio.", val: "R" }, { txt: "C. Facultad para mantener el orden de sus ideas a pesar de las interrupciones.", val: "A" }] },
+        { id: 4, texto: "Se envía a G..., contra su voluntad, a un país extranjero, por el cual no se siente atraído en principio, para una estancia de varias semanas. ¿Cuál será su actitud?", opciones: [{ txt: "A. Estimar que la duración de su estancia es demasiado corta para conseguir integrarse.", val: "N" }, { txt: "B. Tratar de aprender la lengua para comprender mejor a este país y vivir más a gusto en él.", val: "R" }, { txt: "C. No tener más que los contactos estrictamente necesarios para la buena marcha de su trabajo.", val: "A" }] },
+        { id: 5, texto: "Según su opinión, las personas que dicen siempre «su» verdad a los demás, aunque ésta sea desagradable, lo hacen, en general, porque:", opciones: [{ txt: "A. No saben controlar sus impulsos y dicen espontáneamente lo que piensan.", val: "N" }, { txt: "B. No les gusta la hipocresía.", val: "R" }, { txt: "C. Piensan que esto simplifica las relaciones.", val: "A" }] },
+        { id: 6, texto: "Un buen amigo de C... había comenzado bastante brillantemente su carrera profesional, pero los resultados no han sido los que cabría esperar y terminó teniendo numerosos fracasos. ¿Qué piensa C... acerca de esto?", opciones: [{ txt: "A. Que las condiciones no le han sido favorables.", val: "R" }, { txt: "B. Que no estaba a la altura necesaria.", val: "N" }, { txt: "C. Que no ha utilizado bien los medios para salir adelante.", val: "A" }] },
+        { id: 7, texto: "B... encuentra, en casa de unos amigos, a una persona que aparenta una edad muy inferior a la que realmente tiene. ¿Qué opinará B...?", opciones: [{ txt: "A. «Probablemente ha encontrado en la vida lo que le convenía»", val: "R" }, { txt: "B. «Tiene buena suerte; es cuestión de naturaleza»", val: "N" }, { txt: "C. «Seguramente ha tenido una vida fácil»", val: "A" }] },
+        { id: 8, texto: "Para expansionarse, S... decide aprender judo. Después de unos meses de entrenamiento se da cuenta de que progresa muy lentamente. ¿Cuál será su reacción?", opciones: [{ txt: "A. Pensando que realmente no está hecho para el judo, elegirá otro deporte.", val: "N" }, { txt: "B. Convencido de que no está dotado para las actividades corporales, buscará otra forma de actividad.", val: "N" }, { txt: "C. Continuará sus esfuerzos con la esperanza de que seguramente serán un día coronados por el éxito.", val: "A" }] },
+        { id: 9, texto: "P... se acuesta una noche muy fatigado, pero no puede dormirse porque sus vecinos del piso superior han organizado una fiesta muy ruidosa. ¿Qué hará?", opciones: [{ txt: "A. Subir y advertir a sus vecinos.", val: "A" }, { txt: "B. Dar con la escoba algunos golpes en el techo.", val: "N" }, { txt: "C. Tomar un somnífero y tratar de dormir cueste lo que cueste.", val: "R" }] },
+        { id: 10, texto: "G..., que carece de teléfono, llega a una oficina de telégrafos para enviar un telegrama a la hora de cerrar. El encargado le dice que es demasiado tarde, que va a cerrar. ¿Qué hará G...?", opciones: [{ txt: "A. Ir a casa de un amigo que tiene teléfono para poner el telegrama por teléfono.", val: "N" }, { txt: "B. Convencer al encargado de que su telegrama es muy urgente y que debe salir inmediatamente.", val: "A" }, { txt: "C. Ir a una oficina de telégrafos que cierra más tarde.", val: "R" }] },
+        { id: 11, texto: "X... hace un viaje de turismo por un país en que es costumbre discutir los precios. ¿Cuál será su actitud?", opciones: [{ txt: "A. Hará pocas compras porque le molesta tener que discutir siempre.", val: "N" }, { txt: "B. Hará numerosas compras, incluso un poco inútiles, porque le encanta discutir los precios.", val: "A" }, { txt: "C. Convencido de que le timarían, preferirá los almacenes de precios fijos.", val: "R" }] },
+        { id: 12, texto: "Sin tener en cuenta la formación y competencia necesarias, ¿cuál de las siguientes direcciones de servicios le gustaría asumir?", opciones: [{ txt: "A. Gestión.", val: "N" }, { txt: "B. Personal.", val: "R" }, { txt: "C. Publicidad.", val: "A" }] },
+        { id: 13, texto: "Un escritor poco conocido acaba de recibir el premio Planeta. ¿Qué cree usted que preferirá hacer?", opciones: [{ txt: "A. Escribir menos y aprovecharse de su éxito para salir, recibir a la gente y hacer una vida de sociedad.", val: "R" }, { txt: "B. Intentar escribir una obra maestra.", val: "N" }, { txt: "C. Dedicarse a la pintura e intentar triunfar también en ella.", val: "A" }] },
+        { id: 14, texto: "Si usted se encontrara en una situación de examen en la que pudiera elegir entre dos temas, ¿cuál escogería?", opciones: [{ txt: "A. Un tema ampliamente tratado durante el curso con el que tiene, casi, la plena seguridad de alcanzar la nota media necesaria.", val: "R" }, { txt: "B. Un tema que le permita con un mínimo de conocimientos, pero con mucha lógica e imaginación, obtener una calificación muy buena pero, quizá, también muy mala.", val: "A" }, { txt: "C. Un tema no desarrollado que despierte poco interés.", val: "N" }] },
+        { id: 15, texto: "Entre las siguientes actividades de descanso físico en la naturaleza, ¿cuál prefiere usted?", opciones: [{ txt: "A. Una vuelta por la bahía cuando el mar está agitado.", val: "A" }, { txt: "B. Un baño de sol en una playa de arena fina, en un hermoso día de verano con el aire en calma.", val: "R" }, { txt: "C. Un paseo por el campo en primavera.", val: "N" }] },
+        { id: 16, texto: "¿Qué es, a su juicio, lo que atrae a más gente en los viajes o estancias en el extranjero?", opciones: [{ txt: "A. Los paisajes nuevos.", val: "N" }, { txt: "B. El descubrimiento de otra civilización artística.", val: "N" }, { txt: "C. El contacto con una población de costumbres muy diferentes.", val: "R" }] },
+        { id: 17, texto: "P... camina rápidamente por la calle y parece que tiene prisa. Un joven que realiza una encuesta le detiene para hacerle algunas preguntas extrañas, pero divertidas. ¿Qué hará P...?", opciones: [{ txt: "A. Rehusar con firmeza contestar a las preguntas.", val: "N" }, { txt: "B. Responder rápidamente, porque lo encuentra divertido.", val: "A" }, { txt: "C. Excusarse de no tener tiempo para responder, sintiendo de verdad no poder hacerlo.", val: "R" }] },
+        { id: 18, texto: "L... trabaja en una empresa en que recibe muy pocas informaciones a nivel oficial. ¿Qué opina usted de ello?", opciones: [{ txt: "A. Que será muy difícil obtener información.", val: "N" }, { txt: "B. Que con los «rumores de pasillo», eso no constituye problema.", val: "A" }, { txt: "C. Que, de hecho, es muy fácil estar informado; bastará conocer a algunas personas bien situadas.", val: "R" }] },
+        { id: 19, texto: "Son las once de la noche. Hay numerosos vehículos estacionados en la calle, algunos de ellos sobre las aceras. P... ve desde su ventana a uno que trata de abrir la puerta de un coche; parece que no tiene llave y utiliza un destornillador. ¿Cuál será su reacción?", opciones: [{ txt: "A. «Probablemente es un ratero que trata de robar un coche. ¿Y si yo llamase a la policía?»", val: "A" }, { txt: "B. «Alguien ha quedado atrapado en la acera y trata de mover un coche para salir»", val: "R" }, { txt: "C. «¿Qué estará haciendo? Parece que utiliza un destornillador»", val: "N" }] },
+        { id: 20, texto: "Cuando un niño ha cometido una gran tontería, ¿cuál es, a su modo de ver, la mejor reacción?", opciones: [{ txt: "A. Castigarle, explicándole por qué se hace.", val: "N" }, { txt: "B. Explicarle la significación de su tontería situándola en su contexto.", val: "R" }, { txt: "C. Apelar al amor propio del niño.", val: "A" }] },
+        { id: 21, texto: "B... tiene varios hijos y ha decidido intervenir en la educación sexual de cada uno de ellos. ¿Qué procedimiento le parece a usted que adoptará probablemente?", opciones: [{ txt: "A. Reflexionar sobre el asunto y preparar, con el hijo mayor, un tipo de intervención que luego mantendrá con los demás hijos.", val: "N" }, { txt: "B. Seguir su intuición o sus sentimientos.", val: "R" }, { txt: "C. Adoptar un modo de proceder distinto para cada hijo.", val: "A" }] },
+        { id: 22, texto: "¿Cuál es para un niño la manera más «astuta» de presentar unas calificaciones escolares poco brillantes?", opciones: [{ txt: "A. Enseñarlas lo antes posible para librarse de ello.", val: "N" }, { txt: "B. Presentarlas el lunes a la hora del desayuno.", val: "R" }, { txt: "C. Presentarlas en el momento en que pueda aportar, además, alguna compensación.", val: "A" }] },
+        { id: 23, texto: "El hijo de G... ha entrado en el despacho de su padre a pesar de que éste se lo tiene prohibido, y ha derramado un frasco de tinta sobre papeles importantes. G... furioso, le da un buen manotazo. ¿Qué pensará G... un tiempo después?", opciones: [{ txt: "A. Que un buen azote de vez en cuando no viene mal.", val: "N" }, { txt: "B. Que tal vez se ha excedido un poco.", val: "R" }, { txt: "C. Que es conveniente enfadarse de verdad una vez para no tener que volver a hacerlo.", val: "A" }] },
+        { id: 24, texto: "Una persona con la que D... se relaciona muy frecuentemente acaba de jugarle una mala pasada. ¿Cuál será la reacción de D...?", opciones: [{ txt: "A. No muestra ninguna, pero se da cuenta de que le será muy difícil ocultar durante mucho tiempo su resentimiento.", val: "N" }, { txt: "B. No dice nada porque piensa que el daño causado es tal vez menor del que había creído.", val: "R" }, { txt: "C. Se esfuerza en ocultar su resentimiento para no entorpecer sus futuras relaciones.", val: "A" }] },
+        { id: 25, texto: "N... asiste a una comida. Se da cuenta de que a causa de una opinión que se le ha escapado acaba de provocar una situación tensa en el grupo. ¿Qué le parece a usted que será para él lo más desagradable?", opciones: [{ txt: "A. El sentimiento de que algo va a dificultar notablemente el contacto.", val: "R" }, { txt: "B. El pensamiento de que se le va a juzgar a causa de esa observación.", val: "N" }, { txt: "C. El disgusto de haber hablado sin pensar.", val: "A" }] },
+        { id: 26, texto: "R... está jugando a las cartas con sus amigos; a pesar de sus esfuerzos, pierde varias veces seguidas. ¿Cuál es, según usted, su reacción más probable?", opciones: [{ txt: "A. «Después de todo, esta tarde he aprendido bastante. Seguramente ganaré la próxima vez»", val: "R" }, { txt: "B. «Siempre ocurre lo mismo; el juego de las cartas no se me da bien»", val: "N" }, { txt: "C. «Realmente no estoy en forma esta tarde»", val: "A" }] },
+        { id: 27, texto: "R... está sentado en un cine al lado de personas que no se callan y hacen frecuentes comentarios. ¿Qué hará R...?", opciones: [{ txt: "A. Rogarles que se callen.", val: "A" }, { txt: "B. Cambiarse de lugar.", val: "R" }, { txt: "C. Concentrarse más en la película para evitar la molestia.", val: "N" }] },
+        { id: 28, texto: "T... trabaja en una gran empresa. Ha efectuado algunos cambios en la organización del trabajo y es muy criticado por gran parte de sus colegas. ¿Cuál será la reacción de T...?", opciones: [{ txt: "A. Tratar de justificar su posición ante sus colegas.", val: "A" }, { txt: "B. Pensar que, en cualquier caso, nunca se consigue la unanimidad.", val: "R" }, { txt: "C. Replantearse el problema.", val: "N" }] },
+        { id: 29, texto: "¿Qué piensa usted cuando ve a un niño enfrentarse a los adultos?", opciones: [{ txt: "A. Está mal educado.", val: "N" }, { txt: "B. Probablemente tiene serias dificultades en sus relaciones con los demás.", val: "R" }, { txt: "C. Posee una fuerte personalidad.", val: "A" }] },
+        { id: 30, texto: "M... debe contratar a un colaborador que se encargará de la dirección de un servicio. Teniendo en cuenta el hecho de que tendrá responsabilidades jerárquicas, ¿a cuál de las cualidades siguientes dará M... más importancia?", opciones: [{ txt: "A. Tener autoridad.", val: "N" }, { txt: "B. Ser convincente.", val: "A" }, { txt: "C. Ser justo.", val: "R" }] },
+        { id: 31, texto: "Entre los siguientes estilos de conducir un automóvil en carretera, ¿cuál es, a su parecer, el más frecuentemente adoptado por los automovilistas?", opciones: [{ txt: "A. Pensando en la mecánica y en la seguridad, apenas fuerzan la velocidad de su vehículo.", val: "N" }, { txt: "B. Estimando que es tan peligroso circular demasiado despacio como demasiado deprisa, adelantan a los vehículos que les obligan a ir lentamente.", val: "R" }, { txt: "C. Toleran de mala gana no tener vía libre y adelantan sistemáticamente a los vehículos que van delante de ellos.", val: "A" }] },
+        { id: 32, texto: "¿Qué es lo que más valora cuando usted va a un restaurante?", opciones: [{ txt: "A. Una buena cocina.", val: "N" }, { txt: "B. Un ambiente agradable.", val: "R" }, { txt: "C. La posibilidad de comer el plato especial de la casa.", val: "A" }] },
+        { id: 33, texto: "Una señora va de compras a un almacén que se encuentra bastante lejos de su casa. A la puerta del almacén se da cuenta de que ha olvidado su monedero y su talonario de cheques. Sin tener en cuenta el tiempo de que dispone, ¿qué piensa usted que hará?", opciones: [{ txt: "A. Volver a su casa a buscar lo que ha olvidado.", val: "N" }, { txt: "B. Ver si conoce a alguien por la zona que pueda prestarle dinero o tratar de que le vendan a crédito.", val: "A" }, { txt: "C. Dejar las compras para otra ocasión y aprovechar la oportunidad de dar un paseo por el barrio.", val: "R" }] },
+        { id: 34, texto: "M... está soltero. Ha tenido un año de trabajo muy fuerte y debe tomar una decisión sobre sus vacaciones. ¿Qué elegirá?", opciones: [{ txt: "A. Pasar un mes en la costa para poder leer, caminar y descansar.", val: "R" }, { txt: "B. Visitar una región del país que no conoce.", val: "N" }, { txt: "C. Hacer una larga marcha a pie o en bicicleta porque piensa que el deporte es el mejor de los descansos.", val: "A" }] },
+        { id: 35, texto: "¿Cuál es, a su modo de ver, la mejor manera de descansar durante el fin de semana para un hombre que trabaja todos los demás días?", opciones: [{ txt: "A. Reunirse con los amigos.", val: "R" }, { txt: "B. Ir al cine.", val: "N" }, { txt: "C. Leer.", val: "A" }] },
+        { id: 36, texto: "Si usted dispusiera de un año de libertad y de los medios necesarios para hacer lo que quisiera, ¿cuál elegiría entre las actividades siguientes?", opciones: [{ txt: "A. Dar la vuelta al mundo en solitario a bordo de un velero.", val: "R" }, { txt: "B. Participar en una carrera automovilística Madrid-Bombay.", val: "A" }, { txt: "C. Visitar el mayor número posible de países.", val: "N" }] },
+        { id: 37, texto: "Un empleado administrativo, incorporado recientemente a la empresa, pide a X..., uno de sus compañeros, que le preste una pequeña suma de dinero hasta el mes siguiente. ¿Qué hará X...?", opciones: [{ txt: "A. Le prestará el dinero sin hacerle ninguna pregunta para no ponerle en un aprieto.", val: "R" }, { txt: "B. Le prestará el dinero porque a él le gustaría que le hicieran lo mismo si lo necesitara.", val: "N" }, { txt: "C. No le dará el dinero, considerando que su compañero tiene, probablemente, buenos amigos dispuestos a ayudarle.", val: "A" }] },
+        { id: 38, texto: "B... se ha puesto, sin quererlo, fuera de la legalidad y debe escoger a un abogado para que le defienda. ¿Sobre cuál de los criterios siguientes basará su elección?", opciones: [{ txt: "A. Su reputación de elocuencia.", val: "A" }, { txt: "B. Sus buenas relaciones con la magistratura.", val: "N" }, { txt: "C. Su perspicacia psicológica.", val: "R" }] },
+        { id: 39, texto: "E... ha sido nombrado recientemente para un puesto que implica responsabilidades jerárquicas importantes. ¿Qué actitud tomará probablemente frente a sus subordinados?", opciones: [{ txt: "A. Modificar su forma de mandar según las personas y las circunstancias.", val: "R" }, { txt: "B. Fijarse un sistema de mando bien elaborado e idéntico para todos.", val: "N" }, { txt: "C. Basándose en la experiencia, dejarse guiar por su intuición.", val: "A" }] },
+        { id: 40, texto: "R... tiene que hablar sobre informática a empleados que no tienen ningún conocimiento en este campo. ¿Cuál de las siguientes alternativas le planteará menos problemas?", opciones: [{ txt: "A. Utilizar un vocabulario comprensible para todo el mundo.", val: "R" }, { txt: "B. Interesar al auditorio y mantener su atención.", val: "A" }, { txt: "C. Hacer participar a todos los asistentes.", val: "N" }] },
+        { id: 41, texto: "L... asiste a un partido de fútbol entre dos equipos muy conocidos. El partido es muy disputado y los dos equipos rinden al máximo. Entre los espectadores el entusiasmo es tremendo y:", opciones: [{ txt: "A. L... se contenta con aplaudir las jugadas más brillantes.", val: "R" }, { txt: "B. L... es dominado por la agitación general: grita y gesticula como los otros.", val: "A" }, { txt: "C. L... discute con sus vecinos sobre las jugadas de los futbolistas.", val: "N" }] },
+        { id: 42, texto: "B... atraviesa la calle por un paso de peatones con el semáforo en rojo. Un coche llega a gran velocidad y se detiene repentinamente a pocos centímetros de B. ¿Cuál va a ser la reacción inmediata de éste?", opciones: [{ txt: "A. Hará una observación irónica al mismo tiempo que maldice interiormente al conductor.", val: "R" }, { txt: "B. Dará airadamente su opinión al conductor sobre su manera de conducir.", val: "N" }, { txt: "C. Lanzará al conductor algunos insultos que no puede reprimir.", val: "A" }] },
+        { id: 43, texto: "A su modo de ver, ¿cuál es, entre los siguientes aspectos, el más desatendido actualmente en la educación de un hijo?", opciones: [{ txt: "A. La aceptación de responsabilidades.", val: "N" }, { txt: "B. El gusto por el trabajo bien hecho.", val: "R" }, { txt: "C. La capacidad para desenvolverse solo rápidamente.", val: "A" }] },
+        { id: 44, texto: "T... acaba de fracasar en un examen. Uno de sus amigos le dice que algunos fracasos son útiles en la vida. ¿Qué responderá él?", opciones: [{ txt: "A. «Se ve que no estás en mi lugar; yo preferiría no pasar por esto»", val: "A" }, { txt: "B. «Puede que tengas razón»", val: "R" }, { txt: "C. «Admite, por lo menos, que cuando ocurre es difícil de aceptar»", val: "N" }] },
+        { id: 45, texto: "L... se encuentra en una reunión amistosa. Sabe muy bien que la mayor parte de las personas presentes tienen opiniones muy diferentes a las suyas. ¿Qué piensa usted que hará?", opciones: [{ txt: "A. Evitar toda discusión.", val: "R" }, { txt: "B. Provocar la discusión.", val: "A" }, { txt: "C. Dar su opinión si no puede evitarlo.", val: "N" }] },
+        { id: 46, texto: "¿Qué cualidad le parece más útil en las relaciones sociales?", opciones: [{ txt: "A. La tolerancia.", val: "R" }, { txt: "B. La sinceridad.", val: "N" }, { txt: "C. La aceptación de compromisos.", val: "A" }] },
+        { id: 47, texto: "M... acaba de modificar totalmente su apartamento. Invita a sus amigos a la inauguración. Entre los cumplidos que le hagan, ¿cuál será para él el más agradable?", opciones: [{ txt: "A. Una felicitación sobre su buen gusto.", val: "R" }, { txt: "B. Un elogio sobre la forma en que ha sacado partido de la disposición de las habitaciones.", val: "N" }, { txt: "C. Una alabanza a su originalidad, porque su decoración no se parece a ninguna otra ya vista.", val: "A" }] },
+        { id: 48, texto: "S... llega en el momento de una discusión entre dos personas a las que conoce poco. El tema del que hablan, muy específico, le es totalmente desconocido y apenas le interesa. ¿Cuál será su reacción?", opciones: [{ txt: "A. Interviene para informarse, aun a riesgo de parecer ignorante.", val: "A" }, { txt: "B. Trata de interesarse porque no quiere parecer incorrecto.", val: "R" }, { txt: "C. No interviene, porque no puede aportar un punto de vista interesante sobre el asunto.", val: "N" }] },
+        { id: 49, texto: "R... llega con retraso a una reunión de copropietarios. ¿Qué es lo que probablemente le molestará más?", opciones: [{ txt: "A. La idea de que hayan podido aprovecharse de su ausencia para tomar una decisión con la que él no esté de acuerdo.", val: "A" }, { txt: "B. El temor de tener dificultad para integrarse en la discusión.", val: "N" }, { txt: "C. La perspectiva de parecer descortés.", val: "R" }] },
+        { id: 50, texto: "Se ha pedido a F... un informe lo más objetivo posible sobre su modo de ser. ¿Quién decidirá él que lo haga?", opciones: [{ txt: "A. Su mujer.", val: "R" }, { txt: "B. Un grupo de amigos.", val: "A" }, { txt: "C. Él mismo.", val: "N" }] },
+        { id: 51, texto: "X... quiere construir una casa. ¿Cuál de las siguientes soluciones elegirá?", opciones: [{ txt: "A. Llamar a un arquitecto.", val: "R" }, { txt: "B. Hacer los planos él mismo y trabajar directamente con un constructor.", val: "A" }, { txt: "C. Hacer los planos con un amigo que acaba de hacer una casa.", val: "N" }] },
+        { id: 52, texto: "T... es un hombre de negocios generalmente muy ocupado. Una cita anulada a última hora le permite tener una mañana libre totalmente imprevista. ¿Cómo cree usted que la utilizará?", opciones: [{ txt: "A. Aprovechará para levantarse pronto y pasar la mañana practicando su deporte favorito.", val: "N" }, { txt: "B. Hará el balance de la semana que acaba de pasar.", val: "A" }, { txt: "C. Constituirá para él una ocasión muy poco habitual de poder «perder su tiempo» y la aprovechará.", val: "R" }] },
+        { id: 53, texto: "D... va a un país del que no conoce nada. Para preparar su viaje, ¿qué cree usted que hará?", opciones: [{ txt: "A. Leer libros y guías sobre ese país.", val: "N" }, { txt: "B. Preguntar a amigos o parientes que conocen bien el país.", val: "R" }, { txt: "C. Esperar a estar en el país para ver e informarse.", val: "A" }] },
+        { id: 54, texto: "Se oye frecuentemente decir que si una persona cae de repente sobre la acera a las seis de la tarde, un momento en que las calles están abarrotadas, ningún viandante se detiene para ofrecer su ayuda a la persona en dificultades. ¿A qué cree usted que se debe esta conducta?", opciones: [{ txt: "A. A una total indiferencia por lo que puede ocurrir a los demás.", val: "N" }, { txt: "B. Al miedo ante una situación inesperada.", val: "A" }, { txt: "C. Al temor de ocuparse de lo que no le compete a uno.", val: "R" }] },
+        { id: 55, texto: "Una señora va a consultar a un médico sobre una infección que le parece bastante banal. El médico la interroga ampliamente antes de examinarla. Ella contesta, por supuesto, a las preguntas, pero, en el fondo, ¿qué pensará?", opciones: [{ txt: "A. «En su lugar, yo comenzaría por hacer el examen y preguntaría después»", val: "A" }, { txt: "B. «Él debe intentar conocer en qué circunstancias ha cogido esta enfermedad»", val: "R" }, { txt: "C. «Está bien que me haga preguntas, pero hay algunas en las que no veo relación ninguna con lo que yo tengo»", val: "N" }] },
+        { id: 56, texto: "C... tiene que contratar empleados de oficina; dispone de poco tiempo. ¿Qué método empleará?", opciones: [{ txt: "A. Tener una entrevista con los candidatos.", val: "R" }, { txt: "B. Examinar cada «currículum vitae» y sus referencias.", val: "N" }, { txt: "C. Hacerles una prueba práctica en el trabajo.", val: "A" }] },
+        { id: 57, texto: "El mejor delegado de personal es aquel que:", opciones: [{ txt: "A. Es un buen negociador.", val: "A" }, { txt: "B. Está convencido de la justicia de la reivindicación.", val: "N" }, { txt: "C. Está bien integrado con el personal.", val: "R" }] },
+        { id: 58, texto: "La señora D... trata inútilmente de hacer que coma su hijo de cinco años; éste se resiste violentamente. ¿Qué hará ella?", opciones: [{ txt: "A. Forzarle a comer considerando que el niño lo hace por capricho.", val: "N" }, { txt: "B. Hacerle un pequeño chantaje del tipo: «Demuestra a mamá que eres bueno y que la quieres»", val: "A" }, { txt: "C. Dejar al niño, pensando que comerá más en la comida siguiente.", val: "R" }] },
+        { id: 59, texto: "Se habla frecuentemente del respeto a las «reglas de juego». En general, se trata de:", opciones: [{ txt: "A. Una disposición profunda, estable y claramente definida.", val: "N" }, { txt: "B. La aceptación a desempeñar en cada instante el papel que conviene.", val: "A" }, { txt: "C. Una sumisión sincera a las costumbres de un grupo.", val: "R" }] },
+        { id: 60, texto: "C..., que es aficionado al bricolaje, decide tapizar él mismo un sillón valioso. Cuando llega a la mitad de su trabajo se da cuenta de que corre el peligro de fracasar en su intento. ¿Cuál será su decisión?", opciones: [{ txt: "A. Confiar el sillón a un especialista que realizará un trabajo impecable.", val: "R" }, { txt: "B. Deshacer lo que ya ha hecho y comenzar otra vez desde cero.", val: "A" }, { txt: "C. Dejar durante unos días su trabajo para reemprenderlo cuando esté en mejores condiciones.", val: "N" }] },
+        { id: 61, texto: "C... va a ir con su mujer al campo durante los días de Pascua. Previniendo la afluencia, ha reservado billetes de ferrocarril. Salen de su casa a la hora justa, pero un embotellamiento en los alrededores les hace perder el tren. ¿Cómo cree usted que reaccionará?", opciones: [{ txt: "A. «Siempre pasa lo mismo. Si hubieras estado preparada antes no hubiera ocurrido eso»", val: "A" }, { txt: "B. «Se han fastidiado las vacaciones... No me apetece nada viajar de pie en el tren siguiente»", val: "N" }, { txt: "C. «¡Qué le vamos a hacer! Voy a devolver los billetes y nos quedaremos en casa»", val: "R" }] },
+        { id: 62, texto: "A su juicio, la mayoría de los fracasos son debidos a:", opciones: [{ txt: "A. Incapacidad.", val: "N" }, { txt: "B. Coincidencia de circunstancias negativas.", val: "R" }, { txt: "C. Fallos ocasionales.", val: "A" }] },
+        { id: 63, texto: "F... ha encargado un frigorífico. En su ausencia, lo depositan en casa del conserje. El embalaje está estropeado, por lo cual el frigorífico ha sufrido algunos daños. F... decide hacer una gestión ante los servicios de distribución. ¿De qué forma se comportará?", opciones: [{ txt: "A. Escribirá a los citados servicios conservando una copia de la carta.", val: "N" }, { txt: "B. Irá personalmente a reclamar.", val: "A" }, { txt: "C. Rogará a uno de sus amigos, empleado en esa casa, que intervenga.", val: "R" }] },
+        { id: 64, texto: "Con ocasión de un viaje organizado, B... se encuentra con personas que no conoce. Al cabo de unos días se da cuenta de que la mayoría de las personas le tienen poca simpatía. ¿Cómo cree usted que reaccionará?", opciones: [{ txt: "A. Lo tiene sin cuidado, porque para él lo importante es que el viaje esté bien organizado y que el guía sea eficaz.", val: "N" }, { txt: "B. Está un poco molesto y trata de hacer un esfuerzo por resultar más simpático.", val: "R" }, { txt: "C. Esto le amarga, en parte, sus vacaciones y propone que, en la próxima ocasión se irá con sus amigos.", val: "A" }] },
+        { id: 65, texto: "R... hace un viaje con algunos amigos. Una tarde el grupo se separa después de haberse puesto de acuerdo en la hora para la salida. A lo largo de esta tarde, R... descubre un monumento que le interesa mucho visitar, pero, si lo hace, le será imposible llegar a la cita. ¿Qué hará?", opciones: [{ txt: "A. Hace la visita porque piensa que no tendrá ya ocasión de volver a este lugar y que de todas maneras habrá otros que llegarán tarde también.", val: "A" }, { txt: "B. Renuncia a esta visita porque le parece más importante no hacer esperar a los demás.", val: "R" }, { txt: "C. Trata de encontrar a sus amigos para persuadirles de que hagan la visita con él, aun a riesgo de desorganizar la última parte del viaje.", val: "N" }] },
+        { id: 66, texto: "¿Cuál de estas profesiones le parece a usted la más envidiable?", opciones: [{ txt: "A. Gerente de una pequeña empresa.", val: "A" }, { txt: "B. Director adjunto de una empresa internacional.", val: "R" }, { txt: "C. Asesor científico de alto nivel.", val: "N" }] },
+        { id: 67, texto: "A causa de un accidente que ha causado la muerte de los padres de un niño pequeño, J... tiene que encargarse del niño con carácter definitivo. ¿Cuál será la actitud más probable que tendrá a este respecto?", opciones: [{ txt: "A. Teme verse obligado a revisar su sistema de educación.", val: "N" }, { txt: "B. Confía en el buen carácter del niño.", val: "R" }, { txt: "C. Busca otras alternativas para el niño.", val: "A" }] },
+        { id: 68, texto: "Un amigo propone a T... llevarle en su velero a hacer un pequeño crucero. T... nunca ha practicado la vela. ¿Qué cree usted que decidirá?", opciones: [{ txt: "A. Aceptar, pensando que podrá desenvolverse bien.", val: "A" }, { txt: "B. Arreglárselas para hacer antes algunas horas de vela en una escuela.", val: "N" }, { txt: "C. Rechazar la invitación discretamente dando una excusa válida.", val: "R" }] },
+        { id: 69, texto: "T... va hacia el trabajo por su camino habitual. Una furgoneta de reparto le bloquea durante un buen rato en una calle estrecha. A juicio de usted, ¿qué será lo más desagradable para T...?", opciones: [{ txt: "A. La perspectiva de llegar con retraso a su despacho.", val: "N" }, { txt: "B. El hecho de tener que esperar sin poder moverse ni hacer nada.", val: "A" }, { txt: "C. Los toques de claxon -inútiles- de otros automovilistas.", val: "R" }] },
+        { id: 70, texto: "G... trabaja en una empresa para la que debe efectuar frecuentes desplazamientos. Acostumbra a hacer dos horas de atletismo todas las semanas en una sesión de entrenamiento colectivo. A juicio de usted, ¿cuál es su actitud en el curso de esta sesión?", opciones: [{ txt: "A. Insiste en ciertas especialidades que le permitan mantenerse en buena forma.", val: "N" }, { txt: "B. Realiza todas las actividades propuestas, pero sin esforzarse demasiado, porque tiene un trabajo cansado.", val: "R" }, { txt: "C. Se entrega a fondo y frecuentemente termina agotado, porque no concibe el deporte de otra manera.", val: "A" }] },
+        { id: 71, texto: "Según su criterio, ¿cuál es la ventaja de tener un perro en un apartamento de la ciudad?", opciones: [{ txt: "A. Permite sentirse menos solo.", val: "R" }, { txt: "B. Favorece la ocasión de caminar un poco cada día paseando al perro.", val: "N" }, { txt: "C. Vigila el apartamento.", val: "A" }] },
+        { id: 72, texto: "En el transcurso de una reunión en que S... se ha encontrado con amigos, les propone terminar la velada en su casa. Al enterarse, se une a ellos una persona que se mantenía alejada del grupo y a la que él estima poco. ¿Cuál será la reacción de S...?", opciones: [{ txt: "A. Piensa que, después de todo, tendrá ocasión de conocer mejor a esta persona.", val: "R" }, { txt: "B. Estimando que se ha invitado a sí misma, no se ocupará de ella en toda la noche.", val: "A" }, { txt: "C. Lamenta haber hablado demasiado alto.", val: "N" }] },
+        { id: 73, texto: "El director de un centro de delincuentes debe contratar a un nuevo educador. ¿A cuál de estas cualidades dará más importancia?", opciones: [{ txt: "A. Ser irreprochable y poder servir de modelo.", val: "N" }, { txt: "B. Tener buenos conocimientos pedagógicos.", val: "A" }, { txt: "C. Saber escuchar.", val: "R" }] },
+        { id: 74, texto: "Según su opinión, ¿qué es más importante en una persona que da una fiesta?", opciones: [{ txt: "A. Permitir a todos expresarse.", val: "R" }, { txt: "B. Invitar a personas que puedan coincidir con sus intereses.", val: "A" }, { txt: "C. Cuidar de que a nadie le falte nada.", val: "N" }] },
+        { id: 75, texto: "R... ha de exponer un proyecto a un colega que no conoce. Para que R... pueda hacerse comprender por su interlocutor, es preferible que:", opciones: [{ txt: "A. Sepa cuál es su formación académica.", val: "N" }, { txt: "B. Conozca sus antecedentes profesionales.", val: "A" }, { txt: "C. Lea el informe sobre un trabajo hecho por su colega.", val: "R" }] },
+        { id: 76, texto: "Si tuviera que hacer un reproche a la profesión médica, ¿cuál escogería?", opciones: [{ txt: "A. No consagra suficiente tiempo a cada enfermo.", val: "R" }, { txt: "B. Da demasiada importancia al dinero.", val: "A" }, { txt: "C. Utiliza a menudo un vocabulario incomprensible.", val: "N" }] },
+        { id: 77, texto: "N... tiene que escoger un plan de formación para las personas de su departamento. Desearía una formación interesante para todos, pero, a la vez, eficaz y rentable. ¿Qué elegirá?", opciones: [{ txt: "A. Un plan organizado en función de las necesidades del departamento y en el que todas las fases estén definidas de antemano.", val: "N" }, { txt: "B. Un plan que tenga en cuenta a cada participante.", val: "R" }, { txt: "C. Un plan que incluya de manera regular exámenes de control.", val: "A" }] },
+        { id: 78, texto: "M... acaba de tener un ataque de hígado. Sin embargo un amigo le llama para invitarle a comer, precisando que le ha preparado su plato favorito. Supuesto que este plato está contraindicado para él en este momento, ¿cuál será la reacción de M...?", opciones: [{ txt: "A. Aceptar la invitación pensando que por una vez no hará caso de su régimen.", val: "A" }, { txt: "B. Proponer que se aplace esta invitación para más adelante, cuando acabe con su régimen.", val: "R" }, { txt: "C. Asistir a la comida pero no comer más que los alimentos permitidos.", val: "N" }] },
+        { id: 79, texto: "M... no está satisfecho con la Seguridad Social. Lo que más le desagrada es:", opciones: [{ txt: "A. Lo absurdo de algunas disposiciones de esta entidad.", val: "A" }, { txt: "B. La gran dificultad de atenerse a la complejidad de su reglamentación.", val: "N" }, { txt: "C. La falta de atención a aspectos que él cree fundamentales.", val: "R" }] },
+        { id: 80, texto: "N... ha decidido consagrar una parte de su tiempo libre a ayudar a las personas de la tercera edad. Existen varias posibilidades. ¿Cuál elegirá en último lugar cuando no hay otras alternativas?", opciones: [{ txt: "A. Acompañar a las personas ancianas durante el paseo.", val: "R" }, { txt: "B. Visitar a una persona mayor cada semana.", val: "N" }, { txt: "C. Hacer colectas para la construcción de un hogar de ancianos.", val: "A" }] },
+        { id: 81, texto: "Entre los siguientes argumentos publicitarios, ¿cuál tiene más probabilidades de influir en el público?", opciones: [{ txt: "A. La muestra.", val: "R" }, { txt: "B. El «slogan».", val: "A" }, { txt: "C. El testimonio de una «estrella».", val: "N" }] },
+        { id: 82, texto: "En el transcurso de un viaje en tren, D... se encuentra en un compartimento abarrotado. Su vecino fuma y el humo le molesta mucho. Ya le ha rogado que dejara de fumar, sin resultado. ¿Qué hará?", opciones: [{ txt: "A. Pedir el parecer de otros viajeros del compartimento.", val: "N" }, { txt: "B. Abrir la ventana.", val: "A" }, { txt: "C. Hablar de nuevo con su vecino con el objeto de convencerlo de que deje de fumar.", val: "R" }] },
+        { id: 83, texto: "El director del departamento de una empresa de productos alimenticios desea lanzar al mercado un nuevo postre. Dispone de un presupuesto que puede repartir en los tres conceptos que se citan a continuación. ¿En cuál de ellos empleará más dinero?", opciones: [{ txt: "A. En estudios de mercado para conocer los gustos de los futuros compradores.", val: "R" }, { txt: "B. En publicidad para dar a conocer su producto.", val: "A" }, { txt: "C. En la investigación de envases y presentación.", val: "N" }] },
+        { id: 84, texto: "B... toma parte en una discusión muy animada en el transcurso de la cual sus opiniones son muy atacadas. Entre las actitudes siguientes, ¿cuál será la que adopte?", opciones: [{ txt: "A. Tratar por todos los medios de convencer a los demás.", val: "A" }, { txt: "B. Divertirse simplemente en el juego de la discusión.", val: "N" }, { txt: "C. Dejarse convencer cuando vea que sus posiciones son poco defendibles.", val: "R" }] },
+        { id: 85, texto: "Cuando usted va a un restaurante, ¿qué tipo de plato prefiere?", opciones: [{ txt: "A. Uno que ya conoce y que le gusta de modo especial.", val: "R" }, { txt: "B. La especialidad de la casa.", val: "N" }, { txt: "C. Un plato exótico que usted desconoce en absoluto.", val: "A" }] },
+        { id: 86, texto: "Después de un naufragio, C... llega solo a una isla desierta. El clima es muy agradable y la vegetación le permitirá encontrar el alimento necesario. ¿Qué es, a su modo de ver, lo que probablemente le planteará menos problemas?", opciones: [{ txt: "A. El carácter nuevo e insólito de la situación.", val: "A" }, { txt: "B. La soledad.", val: "R" }, { txt: "C. La falta de algunos atractivos de la vida anterior.", val: "N" }] },
+        { id: 87, texto: "J... dirige una importante firma automovilista. Puede escoger entre varias políticas comerciales. ¿Cuál elegirá?", opciones: [{ txt: "A. Orientar sus esfuerzos para sacar de vez en cuando modelos especiales.", val: "A" }, { txt: "B. Buscar los efectos de moda y atender a una clientela particular.", val: "N" }, { txt: "C. Ofrecer de ordinario modelos clásicos.", val: "R" }] }
+    ];
+
+    function inicializarTest() {
+        bancoPreguntas.forEach((pregunta) => {
+            let targetContainer = "containerB1";
+            if (pregunta.id > 22 && pregunta.id <= 44) targetContainer = "containerB2";
+            else if (pregunta.id > 44 && pregunta.id <= 66) targetContainer = "containerB3";
+            else if (pregunta.id > 66) targetContainer = "containerB4";
+
+            const container = document.getElementById(targetContainer);
+            const card = document.createElement("div");
+            card.className = "question-card";
+
+            const questionText = document.createElement("div");
+            questionText.className = "question-text";
+            questionText.textContent = `${pregunta.id}. ${pregunta.texto}`;
+
+            const optionsContainer = document.createElement("div");
+            optionsContainer.className = "options-container";
+
+            pregunta.opciones.forEach((opcion) => {
+                const label = document.createElement("label");
+                label.className = "option-label";
+
+                const input = document.createElement("input");
+                input.type = "radio";
+                input.name = `p${pregunta.id}`;
+                input.value = opcion.val;
+                input.required = true;
+
+                const text = document.createTextNode(opcion.txt);
+                label.append(input, text);
+                optionsContainer.appendChild(label);
+            });
+
+            card.append(questionText, optionsContainer);
+            container.appendChild(card);
+        });
+
+        document.querySelectorAll(".option-label input").forEach((input) => {
+            input.addEventListener("change", function () {
+                const group = this.closest(".options-container");
+                group.querySelectorAll(".option-label").forEach((label) => {
+                    label.classList.remove("selected");
+                });
+                this.closest(".option-label").classList.add("selected");
+            });
+        });
+    }
+
+    function iniciarTest() {
+        const bloqueDatos = document.getElementById("bloqueDatos");
+        const controles = bloqueDatos.querySelectorAll("input, select, textarea");
+
+        for (const control of controles) {
+            if (!control.checkValidity()) {
+                control.reportValidity();
+                return;
+            }
+        }
+
+        bloqueDatos.classList.remove("active");
+        document.getElementById("bloque1").classList.add("active");
+
+        bloqueActual = 1;
+        tiempoInicioBloque = Date.now();
+        actualizarBarra(25);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function cambiarBloque(bloqueSalida, bloqueEntrada) {
+        if (bloqueEntrada > bloqueSalida) {
+            const containerSalida = document.getElementById(`containerB${bloqueSalida}`);
+            const radiosNodeList = containerSalida.querySelectorAll('input[type="radio"]');
+            
+            const names = new Set();
+            radiosNodeList.forEach(r => names.add(r.name));
+            
+            for (let name of names) {
+                if (!containerSalida.querySelector(`input[name="${name}"]:checked`)) {
+                    alert("Por favor, responda todas las situaciones de este bloque antes de continuar.");
+                    return;
+                }
+            }
+        }
+
+        let tiempoPasado = Math.round((Date.now() - tiempoInicioBloque) / 1000);
+        tiempos[`b${bloqueSalida}`] += tiempoPasado;
+
+        document.getElementById(`bloque${bloqueSalida}`).classList.remove('active');
+        document.getElementById(`bloque${bloqueEntrada}`).classList.add('active');
+        
+        bloqueActual = bloqueEntrada;
+        tiempoInicioBloque = Date.now();
+        
+        actualizarBarra(bloqueEntrada * 25);
+        window.scrollTo(0, 0);
+    }
+
+    function actualizarBarra(porcentaje) {
+        document.getElementById('progressBar').style.width = porcentaje + "%";
+    }
+
+    const form = document.getElementById("ipvForm");
+    const statusMessage = document.getElementById("statusMessage");
+    let envioPreparado = false;
+    let bloque4Cerrado = false;
+
+    function mostrarEstado(mensaje, tipo = "error") {
+        statusMessage.textContent = mensaje;
+        statusMessage.className = `status-message visible ${tipo}`;
+        statusMessage.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function cerrarTiempoBloque4() {
+        if (bloque4Cerrado) return;
+        tiempos.b4 += Math.round((Date.now() - tiempoInicioBloque) / 1000);
+        bloque4Cerrado = true;
+    }
+
+    function formatearTiempo(segundos) {
+        const minutos = Math.floor(segundos / 60);
+        const restantes = segundos % 60;
+        return `${minutos}:${String(restantes).padStart(2, "0")} min`;
+    }
+
+    function calcularMetricas(formData) {
+        let receptividad = 0;
+        let agresividad = 0;
+        let neutro = 0;
+
+        for (const [clave, valor] of formData.entries()) {
+            if (!/^p\d+$/.test(clave)) continue;
+            if (valor === "R") receptividad++;
+            else if (valor === "A") agresividad++;
+            else if (valor === "N") neutro++;
+        }
+
+        const total = receptividad + agresividad + neutro;
+        if (total !== bancoPreguntas.length) {
+            throw new Error("Faltan respuestas en la evaluación.");
+        }
+
+        // Esta es una clasificación interna, no un baremo psicométrico oficial.
+        const receptividadNormalizada = (receptividad / total) * 10;
+        const agresividadNormalizada = (agresividad / total) * 10;
+        const dgv = (receptividadNormalizada + agresividadNormalizada) / 2;
+
+        return {
+            respuestas: { receptividad, agresividad, neutro, total },
+            receptividad: receptividadNormalizada.toFixed(1),
+            agresividad: agresividadNormalizada.toFixed(1),
+            dgv: dgv.toFixed(1)
+        };
+    }
+
+    form.addEventListener("submit", async function (event) {
+        if (envioPreparado) return;
+
+        event.preventDefault();
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            mostrarEstado("Complete todos los campos y preguntas antes de enviar.");
+            return;
+        }
+
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Generando resumen orientativo...";
+        statusMessage.className = "status-message";
+
+        try {
+            cerrarTiempoBloque4();
+
+            const formData = new FormData(form);
+            const metricas = calcularMetricas(formData);
+            const tiemposFormateados = {
+                bloque1: formatearTiempo(tiempos.b1),
+                bloque2: formatearTiempo(tiempos.b2),
+                bloque3: formatearTiempo(tiempos.b3),
+                bloque4: formatearTiempo(tiempos.b4)
+            };
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+            let response;
+            try {
+                response = await fetch("/api/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        candidato: {
+                            nombre: formData.get("Nombre"),
+                            puesto: formData.get("Puesto_Aplicado"),
+                            edad: Number(formData.get("Edad"))
+                        },
+                        metricas,
+                        tiempos: tiemposFormateados
+                    }),
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || `El servidor respondió con HTTP ${response.status}.`);
+            }
+
+            const analisisIA = typeof data.analysis === "string"
+                ? data.analysis.trim()
+                : "";
+
+            if (!analisisIA) {
+                throw new Error("El servidor no devolvió un resumen válido.");
+            }
+
+            document.getElementById("hidden_receptividad").value = `${metricas.receptividad} / 10`;
+            document.getElementById("hidden_agresividad").value = `${metricas.agresividad} / 10`;
+            document.getElementById("hidden_dgv").value = `${metricas.dgv} / 10`;
+            document.getElementById("hidden_perfil").value = analisisIA;
+
+            document.getElementById("t_bloque1").value = tiemposFormateados.bloque1;
+            document.getElementById("t_bloque2").value = tiemposFormateados.bloque2;
+            document.getElementById("t_bloque3").value = tiemposFormateados.bloque3;
+            document.getElementById("t_bloque4").value = tiemposFormateados.bloque4;
+
+            mostrarEstado("Resumen generado correctamente. Enviando la evaluación...", "success");
+            envioPreparado = true;
+            form.requestSubmit();
+        } catch (error) {
+            const mensaje = error.name === "AbortError"
+                ? "La generación del resumen excedió el tiempo permitido. Intente nuevamente."
+                : error.message || "No fue posible generar el resumen.";
+
+            console.error("Error al procesar la evaluación:", error);
+            mostrarEstado(mensaje);
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = "Finalizar y Enviar";
+        }
+    });
+
+    inicializarTest();
+</script>
+</body>
+</html>
