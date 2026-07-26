@@ -190,7 +190,7 @@ const geminiResponse = await fetch(endpoint, {
       signal: controller.signal
     });
 
-   const data = await geminiResponse.json().catch(() => ({}));
+    const data = await geminiResponse.json().catch(() => ({}));
 
 console.log(
   "Fin de generación:",
