@@ -126,7 +126,7 @@ module.exports = async function handler(request, response) {
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 
   if (!apiKey) {
     console.error("Falta GEMINI_API_KEY en las variables de entorno.");
