@@ -180,14 +180,21 @@ const geminiResponse = await fetch(endpoint, {
           }
         ],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 900
-        }
+  temperature: 0.3,
+  maxOutputTokens: 2500,
+  thinkingConfig: {
+    thinkingLevel: "LOW"
+  }
+}
       }),
       signal: controller.signal
     });
 
-    const data = await geminiResponse.json().catch(() => ({}));
+    console.log(
+  "Fin de generación:",
+  data?.candidates?.[0]?.finishReason,
+  data?.candidates?.[0]?.finishMessage || ""
+);
 
     if (!geminiResponse.ok) {
       console.error(
