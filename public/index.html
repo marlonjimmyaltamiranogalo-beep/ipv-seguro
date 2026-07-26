@@ -482,7 +482,10 @@
             const analisisIA = typeof data.analysis === "string"
                 ? data.analysis.trim()
                 : "";
-
+            
+console.log("LONGITUD DEL ANÁLISIS:", analisisIA.length);
+console.log("ANÁLISIS COMPLETO:", analisisIA);
+            
             if (!analisisIA) {
                 throw new Error("El servidor no devolvió un resumen válido.");
             }
