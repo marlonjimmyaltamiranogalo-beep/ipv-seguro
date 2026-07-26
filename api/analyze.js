@@ -163,12 +163,15 @@ module.exports = async function handler(request, response) {
 
   try {
     const endpoint =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      `${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  "https://generativelanguage.googleapis.com/v1beta/models/" +
+  `${encodeURIComponent(model)}:generateContent`;
 
-    const geminiResponse = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+const geminiResponse = await fetch(endpoint, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-goog-api-key": apiKey
+  },
       body: JSON.stringify({
         contents: [
           {
