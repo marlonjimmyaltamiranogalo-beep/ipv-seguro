@@ -190,13 +190,15 @@ const geminiResponse = await fetch(endpoint, {
       signal: controller.signal
     });
 
-    console.log(
+   const data = await geminiResponse.json().catch(() => ({}));
+
+console.log(
   "Fin de generación:",
   data?.candidates?.[0]?.finishReason,
   data?.candidates?.[0]?.finishMessage || ""
 );
 
-    if (!geminiResponse.ok) {
+if (!geminiResponse.ok) {
       console.error(
         "Error de Gemini:",
         data?.error?.message || `HTTP ${geminiResponse.status}`
