@@ -194,14 +194,27 @@ const geminiResponse = await fetch(endpoint, {
     const data = await geminiResponse.json().catch(() => ({}));
 
 if (!geminiResponse.ok) {
-      console.error(
-        "Error de Gemini:",
-        data?.error?.message || `HTTP ${geminiResponse.status}`
-      );
-      return sendJson(response, 502, {
-        error: "No fue posible generar el resumen en este momento."
-      });
-    }
+  const geminiError =
+    data?.error?.message || `HTTP ${geminiResponse.status}`;
+
+  console.error("Error de Gemini:", geminiError);
+
+  const quotaExceeded =
+    geminiResponse.status === 429 ||
+    geminiError.toLowerCase().includes("quota") ||
+    geminiError.toLowerCase().includes("resource_exhausted");
+
+  if (quotaExceeded) {
+    return sendJson(response, 429, {
+      error:
+        "El servicio de análisis alcanzó temporalmente su límite de uso. Inténtalo nuevamente más tarde."
+    });
+  }
+
+  return sendJson(response, 502, {
+    error: "No fue posible generar el resumen en este momento."
+  });
+}
 
     const analysis = data?.candidates?.[0]?.content?.parts
       ?.map((part) => (typeof part?.text === "string" ? part.text : ""))
