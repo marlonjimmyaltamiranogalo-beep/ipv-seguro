@@ -125,8 +125,9 @@ module.exports = async function handler(request, response) {
     return sendJson(response, 405, { error: "Método no permitido." });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+ const apiKey = process.env.GEMINI_API_KEY?.trim();
+const model =
+  process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash";
 
   if (!apiKey) {
     console.error("Falta GEMINI_API_KEY en las variables de entorno.");
