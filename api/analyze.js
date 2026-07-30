@@ -163,16 +163,20 @@ const model =
   const timeout = setTimeout(() => controller.abort(), 45_000);
 
   try {
-    const endpoint =
-  "https://generativelanguage.googleapis.com/v1beta/models/" +
-  `${encodeURIComponent(model)}:generateContent`;
+  const sleep = (milliseconds) =>
+    new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-const geminiResponse = await fetch(endpoint, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "x-goog-api-key": apiKey
-  },
+  async function requestGemini(modelName) {
+    const endpoint =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      `${encodeURIComponent(modelName)}:generateContent`;
+
+    const geminiResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
       body: JSON.stringify({
         contents: [
           {
@@ -181,55 +185,139 @@ const geminiResponse = await fetch(endpoint, {
           }
         ],
         generationConfig: {
-  temperature: 0.3,
-  maxOutputTokens: 2500,
-  thinkingConfig: {
-    thinkingLevel: "LOW"
-  }
-}
+          temperature: 0.3,
+          maxOutputTokens: 2500,
+          thinkingConfig: {
+            thinkingLevel: "LOW"
+          }
+        }
       }),
       signal: controller.signal
     });
 
     const data = await geminiResponse.json().catch(() => ({}));
 
-if (!geminiResponse.ok) {
-  const geminiError =
-    data?.error?.message || `HTTP ${geminiResponse.status}`;
-
-  console.error("Error de Gemini:", geminiError);
-
-  const quotaExceeded =
-    geminiResponse.status === 429 ||
-    geminiError.toLowerCase().includes("quota") ||
-    geminiError.toLowerCase().includes("resource_exhausted");
-
-  if (quotaExceeded) {
-    return sendJson(response, 429, {
-      error:
-        "El servicio de análisis alcanzó temporalmente su límite de uso. Inténtalo nuevamente más tarde."
-    });
+    return {
+      response: geminiResponse,
+      data
+    };
   }
 
-  return sendJson(response, 502, {
-    error: "No fue posible generar el resumen en este momento."
-  });
-}
+  const fallbackModel =
+    process.env.GEMINI_FALLBACK_MODEL?.trim() ||
+    "gemini-3.5-flash-lite";
 
-    const analysis = data?.candidates?.[0]?.content?.parts
-      ?.map((part) => (typeof part?.text === "string" ? part.text : ""))
-      .join("")
-      .trim();
+  const modelsToTry = [...new Set([model, fallbackModel])];
 
-    if (!analysis) {
-      console.error("Gemini no devolvió texto utilizable.");
-      return sendJson(response, 502, {
-        error: "El servicio no devolvió un resumen válido."
+  let geminiResponse = null;
+  let data = {};
+  let geminiError = "";
+  let successfulModel = "";
+
+  for (const modelName of modelsToTry) {
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const result = await requestGemini(modelName);
+
+      geminiResponse = result.response;
+      data = result.data;
+
+      if (geminiResponse.ok) {
+        successfulModel = modelName;
+        break;
+      }
+
+      geminiError =
+        data?.error?.message || `HTTP ${geminiResponse.status}`;
+
+      const normalizedError = geminiError.toLowerCase();
+
+      const retryableError =
+        geminiResponse.status === 429 ||
+        geminiResponse.status === 503 ||
+        normalizedError.includes("quota") ||
+        normalizedError.includes("resource_exhausted") ||
+        normalizedError.includes("high demand") ||
+        normalizedError.includes("unavailable");
+
+      console.warn("Intento de Gemini fallido:", {
+        modelo: modelName,
+        intento: attempt,
+        estado: geminiResponse.status,
+        error: geminiError
+      });
+
+      if (!retryableError) {
+        break;
+      }
+
+      if (attempt < 3) {
+        const delay = 1000 * 2 ** (attempt - 1);
+        await sleep(delay);
+      }
+    }
+
+    if (geminiResponse?.ok) {
+      break;
+    }
+  }
+
+  if (!geminiResponse?.ok) {
+    const normalizedError = geminiError.toLowerCase();
+
+    const quotaExceeded =
+      geminiResponse?.status === 429 ||
+      normalizedError.includes("quota") ||
+      normalizedError.includes("resource_exhausted");
+
+    const highDemand =
+      geminiResponse?.status === 503 ||
+      normalizedError.includes("high demand") ||
+      normalizedError.includes("unavailable");
+
+    console.error("Error definitivo de Gemini:", geminiError);
+
+    if (quotaExceeded) {
+      return sendJson(response, 429, {
+        error:
+          "El servicio de análisis alcanzó temporalmente su límite de uso. Inténtalo nuevamente más tarde."
       });
     }
 
-    return sendJson(response, 200, { analysis });
-  } catch (error) {
+    if (highDemand) {
+      return sendJson(response, 503, {
+        error:
+          "El servicio de inteligencia artificial está temporalmente saturado. Inténtalo nuevamente en unos minutos."
+      });
+    }
+
+    return sendJson(response, 502, {
+      error: "No fue posible generar el resumen en este momento."
+    });
+  }
+
+  const analysis = data?.candidates?.[0]?.content?.parts
+    ?.map((part) =>
+      typeof part?.text === "string" ? part.text : ""
+    )
+    .join("")
+    .trim();
+
+  if (!analysis) {
+    console.error("Gemini no devolvió texto utilizable.", {
+      modelo: successfulModel,
+      finishReason: data?.candidates?.[0]?.finishReason || "desconocido"
+    });
+
+    return sendJson(response, 502, {
+      error: "El servicio no devolvió un resumen válido."
+    });
+  }
+
+  console.log("Análisis generado correctamente:", {
+    modelo: successfulModel
+  });
+
+  return sendJson(response, 200, { analysis });} catch (error) {
     if (error?.name === "AbortError") {
       return sendJson(response, 504, {
         error: "El servicio tardó demasiado en responder."
